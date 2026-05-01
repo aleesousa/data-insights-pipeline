@@ -13,7 +13,7 @@ Empresas acumulam dados, mas raramente conseguem extrair valor deles com velocid
 Um pipeline automatizado que vai da coleta ao insight em minutos:
 
 ```
-API Externa → Ingestão Python → PostgreSQL → Transformação → IA (Gemini) → Relatório
+API Externa → Ingestão Python → PostgreSQL → Transformação → IA (Groq) → Relatório
 ```
 
 Sem dashboards caros. Sem dependência de times de BI. Análise contínua, acionável e escalável.
@@ -46,14 +46,14 @@ data-insights-pipeline/
 
 ## Tecnologias
 
-| Camada        | Tecnologia                |
-|---------------|---------------------------|
-| Linguagem     | Python 3.11+              |
-| Banco         | PostgreSQL                |
-| Transformação | Pandas                    |
-| IA            | Gemini (gemini-2.5-flash) |
-| API Fonte     | FakeStore API             |
-| Config        | python-dotenv             |
+| Camada        | Tecnologia           |
+|---------------|----------------------|
+| Linguagem     | Python 3.11+         |
+| Banco         | PostgreSQL           |
+| Transformação | Pandas               |
+| IA            | Groq (llama-3.3-70b) |
+| API Fonte     | FakeStore API        |
+| Config        | python-dotenv        |
 
 ---
 
@@ -147,4 +147,3 @@ cobertura de avaliações (média 3.9/5).
 ## Autor
 
 Alexandre Pereira de Sousa
-    Feito com Python, PostgreSQL e IA.

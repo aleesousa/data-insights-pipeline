@@ -1,25 +1,13 @@
 """
-analyze.py — Gera insights de negócio com IA usando Google Gemini (GRATUITO).
-
-Pré-requisitos:
-  1. pip install google-generativeai python-dotenv
-  2. Crie sua chave gratuita em: https://aistudio.google.com/apikey
-  3. Adicione no .env:  GEMINI_API_KEY=sua_chave_aqui
-
-Limites do plano gratuito (mais que suficiente pra projetos):
-  - 1.500 requisições / dia
-  - 1 milhão de tokens / minuto
-  - Sem custo nenhum
+analyze.py — Gera insights com Groq (gratuito)
 """
 
-import sys
+import os
 import logging
 from pathlib import Path
 from datetime import datetime
-
-from google import genai  
 from dotenv import load_dotenv
-import os
+from groq import Groq
 
 load_dotenv()
 
@@ -29,30 +17,15 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# ── Configuração ───────────────────────────────────────────────
-GEMINI_API_KEY  = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.5-flash"       # modelo gratuito
+GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
 DATA_SUMMARY_PATH = "data/raw/summary.csv"
-INSIGHTS_PATH = "data/raw/insights.md"
+INSIGHTS_PATH     = "data/raw/insights.md"
 
-
-# ── 1. Leitura do sumário ──────────────────────────────────────
-def load_summary(path: str = DATA_SUMMARY_PATH) -> str:
-    if not Path(path).exists():
-        raise FileNotFoundError(
-            f"Arquivo {path} não encontrado. Execute transform.py primeiro."
-        )
-    return Path(path).read_text(encoding="utf-8")
-
-
-# ── 2. System prompt ───────────────────────────────────────────
 SYSTEM_PROMPT = """
 Você é um analista de dados sênior especializado em e-commerce.
-Analise os dados de vendas fornecidos e gere insights acionáveis,
-claros e diretos para uma equipe de negócio não-técnica.
+Analise os dados de vendas e gere insights acionáveis para uma equipe não-técnica.
 
-Estruture SEMPRE sua resposta assim:
-
+Estruture sua resposta em:
 1. 📌 Resumo Executivo (2–3 frases)
 2. 🔍 Principais Achados (bullet points com números)
 3. ⚠️ Alertas ou Riscos
@@ -60,49 +33,46 @@ Estruture SEMPRE sua resposta assim:
 """.strip()
 
 
-# ── 3. Chamada à API Gemini ────────────────────────────────────
+def load_summary() -> str:
+    if not Path(DATA_SUMMARY_PATH).exists():
+        raise FileNotFoundError("Execute transform.py primeiro.")
+    return Path(DATA_SUMMARY_PATH).read_text(encoding="utf-8")
+
+
 def generate_insights(summary: str) -> str:
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY não encontrada.")
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY não encontrada no .env")
 
-    log.info(f"Chamando Google Gemini ({GEMINI_MODEL}) …")
+    client = Groq(api_key=GROQ_API_KEY)
 
-    client = genai.Client(
-        api_key=GEMINI_API_KEY,
-        http_options={"api_version": "v1"}
+    log.info("Chamando Groq (llama-3.3-70b) …")
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": f"Dados:\n{summary}\n\nData: {datetime.now().strftime('%d/%m/%Y %H:%M')}"},
+        ],
+        temperature=0.4,
+        max_tokens=1000,
     )
 
-    prompt = f"""
-{SYSTEM_PROMPT}
-
-Analise os dados de vendas abaixo e gere insights:
-
-{summary}
-""".strip()
-
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt
-    )
-
-    return response.text
+    return response.choices[0].message.content
 
 
-# ── 4. Salva relatório ─────────────────────────────────────────
-def save_insights(insights: str, path: str = INSIGHTS_PATH) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
+def save_insights(insights: str) -> None:
+    Path(INSIGHTS_PATH).parent.mkdir(parents=True, exist_ok=True)
     header = f"# Insights — {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-    Path(path).write_text(header + insights, encoding="utf-8")
-    log.info(f"Relatório salvo em {path}")
+    Path(INSIGHTS_PATH).write_text(header + insights, encoding="utf-8")
+    log.info(f"Relatório salvo em {INSIGHTS_PATH}")
 
 
-# ── Main ───────────────────────────────────────────────────────
 def run():
     summary  = load_summary()
     insights = generate_insights(summary)
 
     print("\n" + "=" * 60)
-    print("🤖 INSIGHTS GERADOS PELA IA (Gemini - Gratuito)")
+    print("🤖 INSIGHTS GERADOS PELA IA (Groq - Gratuito)")
     print("=" * 60)
     print(insights)
     print("=" * 60 + "\n")
